@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bachir's Finance Dashboard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:#0d0f14; --surface:#141720; --surface2:#1c2030;
+      --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+      --ink:#eef0f6; --ink2:#8e94a8; --ink3:#545b6e;
+      --green:#2ee89a; --green-dim:rgba(46,232,154,0.12);
+      --red:#ff5f6d;   --red-dim:rgba(255,95,109,0.12);
+      --gold:#f5c842;  --gold-dim:rgba(245,200,66,0.12);
+      --blue:#5b9cf6;  --blue-dim:rgba(91,156,246,0.12);
+      --radius:14px;
+      --font-display:'DM Serif Display',serif;
+      --font-body:'Outfit',sans-serif;
+      --font-mono:'DM Mono',monospace;
+    }
+
+    html { scroll-behavior:smooth; }
+    body {
+      font-family:var(--font-body);
+      background:var(--bg);
+      color:var(--ink);
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    body::before {
+      content:''; position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events:none; z-index:0; opacity:0.5;
+    }
+
+    .shell {
+      position:relative; z-index:1;
+      display:grid;
+      grid-template-columns:220px 1fr;
+      grid-template-rows:auto 1fr;
+      min-height:100vh;
+    }
+
+    .sidebar {
+      grid-row:1/-1;
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      padding:32px 20px;
+      display:flex; flex-direction:column; gap:8px;
+      position:sticky; top:0; height:100vh;
+    }
+    .logo {
+      font-family:var(--font-display); font-size:22px;
+      color:var(--ink); letter-spacing:-0.5px;
+      padding:0 8px 28px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:12px; line-height:1.2;
+    }
+    .logo span { color:var(--green); }
+
+    .nav-btn {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px; border-radius:10px;
+      border:none; background:none;
+      color:var(--ink2); font-family:var(--font-body);
+      font-size:14px; font-weight:500;
+      cursor:pointer; transition:all 0.18s;
+      text-align:left; width:100%;
+    }
+    .nav-btn:hover  { background:var(--surface2); color:var(--ink); }
+    .nav-btn.active { background:var(--green-dim); color:var(--green); }
+    .nav-icon { font-size:16px; width:20px; text-align:center; }
+    .sidebar-footer {
+      margin-top:auto; padding-top:20px;
+      border-top:1px solid var(--border);
+      font-size:12px; color:var(--ink3);
+      line-height:1.6; padding-left:8px;
+    }
+
+    .topbar {
+      padding:24px 36px 0;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .page-title { font-family:var(--font-display); font-size:28px; letter-spacing:-0.5px; }
+
+    .currency-pill {
+      display:flex; align-items:center; gap:8px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:100px; padding:8px 16px;
+      font-size:13px; color:var(--ink2);
+    }
+    .currency-pill .rate { color:var(--gold); font-family:var(--font-mono); font-size:12px; }
+
+    .main { padding:24px 36px 48px; display:flex; flex-direction:column; gap:24px; }
+
+    .page { display:none; flex-direction:column; gap:24px; }
+    .page.active { display:flex; }
+
+    .card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:24px;
+    }
+    .card-title {
+      font-size:11px; letter-spacing:1.5px;
+      text-transform:uppercase; color:var(--ink3);
+      font-weight:500; margin-bottom:16px;
+    }
+
+    .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .stat-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:20px 22px;
+      position:relative; overflow:hidden;
+      transition:border-color 0.2s, transform 0.2s;
+    }
+    .stat-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .stat-card.green::before { background:var(--green); }
+    .stat-card.red::before   { background:var(--red); }
+    .stat-card.gold::before  { background:var(--gold); }
+    .stat-card.blue::before  { background:var(--blue); }
+
+    .stat-label { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink3); margin-bottom:10px; }
+    .stat-value { font-family:var(--font-mono); font-size:26px; font-weight:500; line-height:1; }
+    .stat-card.green .stat-value { color:var(--green); }
+    .stat-card.red   .stat-value { color:var(--red); }
+    .stat-card.gold  .stat-value { color:var(--gold); }
+    .stat-card.blue  .stat-value { color:var(--blue); }
+    .stat-sub { font-size:12px; color:var(--ink3); margin-top:6px; }
+
+    .two-col   { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-group.full { grid-column:1/-1; }
+
+    label { font-size:12px; color:var(--ink2); letter-spacing:0.5px; }
+    input, select, textarea {
+      background:var(--bg); border:1px solid var(--border2);
+      border-radius:9px; color:var(--ink);
+      font-family:var(--font-body); font-size:14px;
+      padding:10px 14px; outline:none;
+      transition:border-color 0.2s, box-shadow 0.2s;
+      width:100%;
+    }
+    input:focus, select:focus {
+      border-color:var(--green);
+      box-shadow:0 0 0 3px rgba(46,232,154,0.1);
+    }
+    select option { background:var(--surface2); }
+
+    .type-toggle { display:flex; gap:8px; }
+    .type-btn {
+      flex:1; padding:10px; border-radius:9px;
+      border:1px solid var(--border2);
+      background:var(--bg); color:var(--ink2);
+      font-family:var(--font-body); font-size:14px;
+      font-weight:500; cursor:pointer; transition:all 0.18s;
+    }
+    .type-btn.active-income  { background:var(--green-dim); border-color:var(--green); color:var(--green); }
+    .type-btn.active-expense { background:var(--red-dim);   border-color:var(--red);   color:var(--red); }
+
+    .btn { padding:12px 24px; border-radius:10px; border:none; font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer; transition:all 0.18s; }
+    .btn-primary   { background:var(--green); color:#0d0f14; }
+    .btn-primary:hover { filter:brightness(1.1); transform:translateY(-1px); }
+    .btn-secondary { background:var(--surface2); color:var(--ink2); border:1px solid var(--border2); }
+    .btn-secondary:hover { color:var(--ink); }
+    .btn-danger    { background:var(--red-dim); color:var(--red); border:1px solid var(--red); }
+    .btn-danger:hover { filter:brightness(1.15); }
+
+    .tx-list { display:flex; flex-direction:column; gap:2px; }
+    .tx-row {
+      display:flex; align-items:center; gap:14px;
+      padding:12px 16px; border-radius:10px;
+      transition:background 0.15s;
+    }
+    .tx-row:hover { background:var(--surface2); }
+
+    .tx-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .tx-dot.income  { background:var(--green); }
+    .tx-dot.expense { background:var(--red); }
+
+    .tx-meta { flex:1; }
+    .tx-cat  { font-size:14px; color:var(--ink); font-weight:500; text-transform:capitalize; }
+    .tx-date { font-size:12px; color:var(--ink3); }
+    .tx-amount { font-family:var(--font-mono); font-size:15px; font-weight:500; }
+    .tx-amount.income  { color:var(--green); }
+    .tx-amount.expense { color:var(--red); }
+
+    .tx-actions { display:flex; gap:6px; flex-shrink:0; }
+    .btn-icon {
+      padding:6px 12px; border-radius:7px;
+      border:1px solid var(--border2);
+      background:none; font-size:12px; font-weight:500;
+      cursor:pointer; transition:all 0.15s;
+      font-family:var(--font-body);
+    }
+    .btn-edit   { color:var(--blue); }
+    .btn-edit:hover   { background:var(--blue-dim); border-color:var(--blue); }
+    .btn-delete { color:var(--red); }
+    .btn-delete:hover { background:var(--red-dim);  border-color:var(--red); }
+
+    .modal-overlay {
+      display:none; position:fixed; inset:0; z-index:100;
+      background:rgba(0,0,0,0.75);
+      align-items:center; justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal {
+      background:var(--surface); border:1px solid var(--border2);
+      border-radius:18px; padding:32px;
+      width:100%; max-width:500px; margin:20px;
+    }
+    .modal-title { font-family:var(--font-display); font-size:22px; margin-bottom:4px; }
+    .modal-sub   { font-size:13px; color:var(--ink3); margin-bottom:24px; }
+    .modal-footer { display:flex; gap:10px; margin-top:24px; justify-content:flex-end; }
+
+    .cat-row { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+    .cat-header { display:flex; justify-content:space-between; align-items:center; }
+    .cat-name { font-size:13px; color:var(--ink); text-transform:capitalize; }
+    .cat-amt  { font-family:var(--font-mono); font-size:13px; color:var(--ink2); }
+    .bar-track { height:5px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+    .bar-fill  { height:100%; border-radius:99px; transition:width 0.8s cubic-bezier(0.16,1,0.3,1); }
+
+    .goal-card {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:12px; padding:18px; margin-bottom:10px;
+    }
+    .goal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .goal-name { font-size:15px; font-weight:500; }
+    .goal-pct  { font-family:var(--font-mono); font-size:13px; color:var(--gold); }
+    .goal-track { height:8px; background:var(--bg); border-radius:99px; overflow:hidden; margin-bottom:8px; }
+    .goal-fill  { height:100%; background:linear-gradient(90deg,var(--gold),#ffa500); border-radius:99px; transition:width 1s cubic-bezier(0.16,1,0.3,1); }
+    .goal-amounts { display:flex; justify-content:space-between; font-size:12px; color:var(--ink3); }
+    .goal-actions { display:flex; gap:8px; margin-top:12px; }
+
+    .rate-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+    .rate-row:last-child { border-bottom:none; }
+    .rate-label { font-size:14px; color:var(--ink2); }
+    .rate-val   { font-family:var(--font-mono); font-size:15px; color:var(--gold); }
+
+    .export-row { display:flex; gap:10px; margin-top:16px; }
+    .loading    { text-align:center; padding:20px; color:var(--ink3); font-size:13px; }
+    .empty      { text-align:center; padding:40px 20px; color:var(--ink3); font-size:14px; }
+    .empty-icon { font-size:36px; margin-bottom:12px; }
+    .section-heading { font-family:var(--font-display); font-size:20px; margin-bottom:4px; }
+    .section-sub     { font-size:13px; color:var(--ink3); margin-bottom:20px; }
+
+    .toast {
+      position:fixed; bottom:28px; right:28px;
+      background:var(--surface2); border:1px solid var(--border2);
+      border-radius:12px; padding:14px 20px;
+      font-size:14px; color:var(--ink);
+      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      transform:translateY(80px); opacity:0;
+      transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+      z-index:999;
+    }
+    .toast.show    { transform:translateY(0); opacity:1; }
+    .toast.success { border-color:var(--green); }
+    .toast.error   { border-color:var(--red); }
+
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .page.active > * { animation:fadeUp 0.4s ease both; }
+    .page.active > *:nth-child(1){animation-delay:0.00s}
+    .page.active > *:nth-child(2){animation-delay:0.05s}
+    .page.active > *:nth-child(3){animation-delay:0.10s}
+    .page.active > *:nth-child(4){animation-delay:0.15s}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="logo">Bachir's<br/><span>Finance Dashboard</span></div>
+    <button class="nav-btn active" onclick="showPage('dashboard',this)"><span class="nav-icon">◈</span> Dashboard</button>
+    <button class="nav-btn" onclick="showPage('add',this)"><span class="nav-icon">＋</span> Add Transaction</button>
+    <button class="nav-btn" onclick="showPage('history',this)"><span class="nav-icon">≡</span> History</button>
+    <button class="nav-btn" onclick="showPage('savings',this)"><span class="nav-icon">◎</span> Savings Goals</button>
+    <button class="nav-btn" onclick="showPage('currency',this)"><span class="nav-icon">$</span> Currency Rates</button>
+    <div class="sidebar-footer">Running locally<br/>3 services active<br/>SQLite database</div>
+  </aside>
+
+  <header class="topbar">
+    <div id="page-title" class="page-title">Dashboard</div>
+    <div class="currency-pill">
+      <span>1 USD =</span>
+      <span class="rate" id="lbp-rate">loading…</span>
+      <span>LBP</span>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-label">Total Income</div>
+          <div class="stat-value" id="stat-income">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Total Expenses</div>
+          <div class="stat-value" id="stat-expense">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Net Savings</div>
+          <div class="stat-value" id="stat-savings">—</div>
+          <div class="stat-sub">Income − Expenses</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Top Category</div>
+          <div class="stat-value" style="font-size:18px;font-family:var(--font-body)" id="stat-top">—</div>
+          <div class="stat-sub" id="stat-since">Tracking since —</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Spending by Category</div>
+          <div id="cat-breakdown">
+            <div class="empty"><div class="empty-icon">📊</div>No expense data yet</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Transactions</div>
+          <div class="tx-list" id="recent-tx">
+            <div class="empty"><div class="empty-icon">💸</div>No transactions yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-add">
+      <div class="card" style="max-width:560px">
+        <div class="section-heading">Add Transaction</div>
+        <div class="section-sub">Record income or an expense</div>
+        <div class="form-grid">
+
+          <div class="form-group full">
+            <label>Type</label>
+            <div class="type-toggle">
+              <button class="type-btn active-income" id="btn-income"  onclick="setType('income')">↑ Income</button>
+              <button class="type-btn"               id="btn-expense" onclick="setType('expense')">↓ Expense</button>
+            </div>
+            <input type="hidden" id="tx-type" value="income"/>
+          </div>
+
+          <div class="form-group"><label>Amount (USD)</label><input type="number" id="tx-amount" placeholder="0.00" step="0.01" min="0"/></div>
+          <div class="form-group"><label>Date</label><input type="date" id="tx-date"/></div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="tx-category">
+              <option value="salary">Salary</option><option value="freelance">Freelance</option>
+              <option value="investment">Investment</option><option value="gift">Gift</option>
+              <option value="food">Food</option><option value="rent">Rent</option>
+              <option value="transportation">Transportation</option><option value="utilities">Utilities</option>
+              <option value="entertainment">Entertainment</option><option value="health">Health</option>
+              <option value="education">Education</option><option value="donation">Donation</option>
+              <option value="subscription">Subscription</option><option value="clothing">Clothing</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Description (optional)</label><input type="text" id="tx-desc" placeholder="e.g. Grocery run"/></div>
+          <div class="form-group full" style="margin-top:8px">
+            <button class="btn btn-primary" onclick="submitTransaction()">Save Transaction</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-history">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="section-heading">Transaction History</div>
+          <div class="section-sub">Click Edit to change a transaction, Delete to remove it</div>
+        </div>
+        <div class="export-row">
+          <button class="btn btn-secondary" onclick="exportJSON()">Export JSON</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tx-list" id="full-tx-list">
+          <div class="loading">Loading transactions…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-savings">
+      <div class="two-col" style="align-items:start">
+        <div>
+          <div class="section-heading">Savings Goals</div>
+          <div class="section-sub">Track progress toward your goals</div>
+          <div id="goals-list">
+            <div class="empty"><div class="empty-icon">🎯</div>No goals yet</div>
+          </div>
+        </div>
+
+        <div class="card" style="position:sticky;top:24px">
+          <div class="section-heading" style="font-size:17px;margin-bottom:4px">New Goal</div>
+          <div class="section-sub">Set a savings target</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group"><label>Goal Name</label><input type="text" id="goal-name" placeholder="e.g. Travel to Japan"/></div>
+            <div class="form-group"><label>Target Amount (USD)</label><input type="number" id="goal-target" placeholder="2000" min="0"/></div>
+            <div class="form-group"><label>Amount Saved So Far</label><input type="number" id="goal-current" placeholder="0" min="0"/></div>
+            <button class="btn btn-primary" onclick="submitGoal()">Add Goal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-currency">
+      <div class="section-heading">Currency Exchange Rates</div>
+      <div class="section-sub">Live rates from external API — base: USD</div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Key Rates</div>
+          <div id="rates-list"><div class="loading">Fetching rates…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Convert Amount</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Amount in USD</label>
+              <input type="number" id="conv-amount" placeholder="100" oninput="convertAmount()"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px" id="conv-results">
+              <div style="font-size:13px;color:var(--ink3)">Enter an amount above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Transaction</div>
+    <div class="modal-sub">Make your changes then click Save</div>
+    <input type="hidden" id="edit-id"/>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button class="type-btn" id="edit-btn-income"  onclick="setEditType('income')">↑ Income</button>
+          <button class="type-btn" id="edit-btn-expense" onclick="setEditType('expense')">↓ Expense</button>
+        </div>
+        <input type="hidden" id="edit-type"/>
+      </div>
+      <div class="form-group"><label>Amount (USD)</label><input type="number" id="edit-amount" step="0.01" min="0"/></div>
+      <div class="form-group"><label>Date</label><input type="date" id="edit-date"/></div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="edit-category">
+          <option value="salary">Salary</option><option value="freelance">Freelance</option>
+          <option value="investment">Investment</option><option value="gift">Gift</option>
+          <option value="food">Food</option><option value="rent">Rent</option>
+          <option value="transportation">Transportation</option><option value="utilities">Utilities</option>
+          <option value="entertainment">Entertainment</option><option value="health">Health</option>
+          <option value="education">Education</option><option value="donation">Donation</option>
+          <option value="subscription">Subscription</option><option value="clothing">Clothing</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Description (optional)</label><input type="text" id="edit-desc" placeholder="e.g. Grocery run"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary"   onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-goal-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Savings Goal</div>
+    <div class="modal-sub">Update your goal details then click Save</div>
+    <input type="hidden" id="edit-goal-id"/>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-group"><label>Goal Name</label><input type="text" id="edit-goal-name" placeholder="e.g. Travel to Japan"/></div>
+      <div class="form-group"><label>Target Amount (USD)</label><input type="number" id="edit-goal-target" min="0"/></div>
+      <div class="form-group"><label>Amount Saved So Far</label><input type="number" id="edit-goal-current" min="0"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEditGoalModal()">Cancel</button>
+      <button class="btn btn-primary"   onclick="saveGoalEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TRANSACTION_URL = 'http://localhost:5001';
+  const ANALYTICS_URL   = 'http://localhost:5002';
+  const CURRENCY_URL    = 'http://localhost:5003';
+
+  let cachedRates = {};
+  let allTransactions = [];
+
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    if (btn) btn.classList.add('active');
+
+    const titles = {
+      dashboard: 'Dashboard',
+      add:       'Add Transaction',
+      history:   'Transaction History',
+      savings:   'Savings Goals',
+      currency:  'Currency Rates'
+    };
+    document.getElementById('page-title').textContent = titles[name];
+
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'history')   loadHistory();
+    if (name === 'savings')   loadGoals();
+    if (name === 'currency')  loadCurrency();
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + type + ' show';
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function fmt(n) {
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function setType(type) {
+    document.getElementById('tx-type').value = type;
+    document.getElementById('btn-income').className  = type === 'income'  ? 'type-btn active-income'  : 'type-btn';
+    document.getElementById('btn-expense').className = type === 'expense' ? 'type-btn active-expense' : 'type-btn';
+  }
+
+  async function submitTransaction() {
+    const type     = document.getElementById('tx-type').value;
+    const amount   = parseFloat(document.getElementById('tx-amount').value);
+    const date     = document.getElementById('tx-date').value;
+    const category = document.getElementById('tx-category').value;
+    const desc     = document.getElementById('tx-desc').value;
+
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!date)                  return toast('Please select a date', 'error');
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, amount, category, date, description: desc })
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Transaction saved! ✓');
+        document.getElementById('tx-amount').value = '';
+        document.getElementById('tx-desc').value   = '';
+      } else {
+        toast(data.message || 'Something went wrong', 'error');
+      }
+    } catch {
+      toast('Cannot reach Transaction Service. Is it running on port 5001?', 'error');
+    }
+  }
+
+  async function loadDashboard() {
+    loadLBPRate();
+
+    try {
+      const res  = await fetch(ANALYTICS_URL + '/analytics/summary');
+      const data = await res.json();
+      document.getElementById('stat-income').textContent  = fmt(data.totalIncome);
+      document.getElementById('stat-expense').textContent = fmt(data.totalExpenses);
+      document.getElementById('stat-savings').textContent = fmt(data.netSavings);
+      document.getElementById('stat-top').textContent     = data.topCategory || '—';
+      document.getElementById('stat-since').textContent   = data.trackingSince ? 'Since ' + data.trackingSince : 'No data yet';
+      renderCategoryBars(data.byCategory || []);
+    } catch {}
+
+    try {
+      const res = await fetch(TRANSACTION_URL + '/transactions');
+      allTransactions = await res.json();
+      renderRecentTx(allTransactions.slice(0, 5));
+    } catch {}
+  }
+
+  function renderCategoryBars(cats) {
+    const el = document.getElementById('cat-breakdown');
+    if (!cats.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>No expense data yet</div>';
+      return;
+    }
+    const max    = cats[0].total;
+    const colors = ['#5b9cf6','#2ee89a','#f5c842','#ff5f6d','#c084fc','#fb923c','#34d399'];
+    el.innerHTML = cats.map((c, i) => `
+      <div class="cat-row">
+        <div class="cat-header">
+          <span class="cat-name">${c.category}</span>
+          <span class="cat-amt">${fmt(c.total)}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${((c.total / max) * 100).toFixed(1)}%;background:${colors[i % colors.length]}"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderRecentTx(txs) {
+    const el = document.getElementById('recent-tx');
+    if (!txs.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">💸</div>No transactions yet</div>';
+      return;
+    }
+    el.innerHTML = txs.map(tx => `
+      <div class="tx-row">
+        <div class="tx-dot ${tx.type}"></div>
+        <div class="tx-meta">
+          <div class="tx-cat">${tx.category}</div>
+          <div class="tx-date">${tx.date}${tx.description ? ' · ' + tx.description : ''}</div>
+        </div>
+        <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '−'}${fmt(tx.amount)}</div>
+      </div>`).join('');
+  }
+
+  async function loadHistory() {
+    const el = document.getElementById('full-tx-list');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+
+    try {
+      const res = await fetch(TRANSACTION_URL + '/transactions');
+      allTransactions = await res.json();
+
+      if (!allTransactions.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No transactions yet. Add some!</div>';
+        return;
+      }
+
+      el.innerHTML = allTransactions.map(tx => `
+        <div class="tx-row" id="tx-row-${tx.id}">
+          <div class="tx-dot ${tx.type}"></div>
+          <div class="tx-meta">
+            <div class="tx-cat">${tx.category} <span style="font-weight:400;color:var(--ink3);font-size:12px">#${tx.id}</span></div>
+            <div class="tx-date">${tx.date}${tx.description ? ' · ' + tx.description : ''}</div>
+          </div>
+          <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '−'}${fmt(tx.amount)}</div>
+          <div class="tx-actions">
+            <button class="btn-icon btn-edit"   onclick="openEditModal(${tx.id})">Edit</button>
+            <button class="btn-icon btn-delete" onclick="deleteTransaction(${tx.id})">Delete</button>
+          </div>
+        </div>`).join('');
+    } catch {
+      el.innerHTML = '<div class="empty">Cannot reach Transaction Service. Is it running?</div>';
+    }
+  }
+
+  function openEditModal(id) {
+    const tx = allTransactions.find(t => t.id === id);
+    if (!tx) return;
+
+    document.getElementById('edit-id').value       = tx.id;
+    document.getElementById('edit-amount').value   = tx.amount;
+    document.getElementById('edit-date').value     = tx.date;
+    document.getElementById('edit-category').value = tx.category;
+    document.getElementById('edit-desc').value     = tx.description || '';
+    setEditType(tx.type);
+
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+  }
+
+  function setEditType(type) {
+    document.getElementById('edit-type').value = type;
+    document.getElementById('edit-btn-income').className  = type === 'income'  ? 'type-btn active-income'  : 'type-btn';
+    document.getElementById('edit-btn-expense').className = type === 'expense' ? 'type-btn active-expense' : 'type-btn';
+  }
+
+  async function saveEdit() {
+    const id       = parseInt(document.getElementById('edit-id').value);
+    const type     = document.getElementById('edit-type').value;
+    const amount   = parseFloat(document.getElementById('edit-amount').value);
+    const date     = document.getElementById('edit-date').value;
+    const category = document.getElementById('edit-category').value;
+    const desc     = document.getElementById('edit-desc').value;
+
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!date)                  return toast('Please select a date', 'error');
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/transactions/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, amount, category, date, description: desc })
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Transaction updated ✓');
+        closeEditModal();
+        loadHistory();
+        loadDashboard();
+      } else {
+        toast(data.message || 'Update failed', 'error');
+      }
+    } catch {
+      toast('Cannot reach Transaction Service.', 'error');
+    }
+  }
+
+  async function deleteTransaction(id) {
+    if (!confirm('Delete this transaction? This cannot be undone.')) return;
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/transactions/' + id, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Transaction deleted');
+        const row = document.getElementById('tx-row-' + id);
+        if (row) row.remove();
+        allTransactions = allTransactions.filter(t => t.id !== id);
+        loadDashboard();
+      } else {
+        toast('Delete failed', 'error');
+      }
+    } catch {
+      toast('Cannot reach Transaction Service.', 'error');
+    }
+  }
+
+  document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  let allGoals = [];
+
+  async function loadGoals() {
+    const el = document.getElementById('goals-list');
+    try {
+      const res = await fetch(TRANSACTION_URL + '/savings');
+      allGoals  = await res.json();
+
+      if (!allGoals.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>No goals yet. Create one!</div>';
+        return;
+      }
+
+      el.innerHTML = allGoals.map(g => {
+        const pct = Math.min((g.current_amount / g.goal_amount) * 100, 100).toFixed(1);
+        return `
+          <div class="goal-card" id="goal-card-${g.id}">
+            <div class="goal-header">
+              <span class="goal-name">${g.goal_name}</span>
+              <span class="goal-pct">${pct}%</span>
+            </div>
+            <div class="goal-track">
+              <div class="goal-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="goal-amounts">
+              <span>Saved: ${fmt(g.current_amount)}</span>
+              <span>Goal: ${fmt(g.goal_amount)}</span>
+            </div>
+            <div class="goal-actions">
+              <button class="btn-icon btn-edit"   onclick="openEditGoalModal(${g.id})">Edit</button>
+              <button class="btn-icon btn-delete" onclick="deleteGoal(${g.id})">Delete</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      el.innerHTML = '<div class="empty">Cannot reach Transaction Service.</div>';
+    }
+  }
+
+  async function submitGoal() {
+    const name    = document.getElementById('goal-name').value.trim();
+    const target  = parseFloat(document.getElementById('goal-target').value);
+    const current = parseFloat(document.getElementById('goal-current').value) || 0;
+
+    if (!name)   return toast('Please enter a goal name', 'error');
+    if (!target) return toast('Please enter a target amount', 'error');
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/savings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goalName: name, goalAmount: target, currentAmount: current })
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Goal saved! ✓');
+        document.getElementById('goal-name').value    = '';
+        document.getElementById('goal-target').value  = '';
+        document.getElementById('goal-current').value = '';
+        loadGoals();
+      }
+    } catch {
+      toast('Cannot reach Transaction Service.', 'error');
+    }
+  }
+
+  function openEditGoalModal(id) {
+    const goal = allGoals.find(g => g.id === id);
+    if (!goal) return;
+
+    document.getElementById('edit-goal-id').value      = goal.id;
+    document.getElementById('edit-goal-name').value    = goal.goal_name;
+    document.getElementById('edit-goal-target').value  = goal.goal_amount;
+    document.getElementById('edit-goal-current').value = goal.current_amount;
+
+    document.getElementById('edit-goal-modal').classList.add('open');
+  }
+
+  function closeEditGoalModal() {
+    document.getElementById('edit-goal-modal').classList.remove('open');
+  }
+
+  async function saveGoalEdit() {
+    const id      = parseInt(document.getElementById('edit-goal-id').value);
+    const name    = document.getElementById('edit-goal-name').value.trim();
+    const target  = parseFloat(document.getElementById('edit-goal-target').value);
+    const current = parseFloat(document.getElementById('edit-goal-current').value) || 0;
+
+    if (!name)   return toast('Please enter a goal name', 'error');
+    if (!target) return toast('Please enter a target amount', 'error');
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/savings/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goalName: name, goalAmount: target, currentAmount: current })
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Goal updated ✓');
+        closeEditGoalModal();
+        loadGoals();
+      } else {
+        toast(data.message || 'Update failed', 'error');
+      }
+    } catch {
+      toast('Cannot reach Transaction Service.', 'error');
+    }
+  }
+
+  async function deleteGoal(id) {
+    if (!confirm('Delete this savings goal? This cannot be undone.')) return;
+
+    try {
+      const res  = await fetch(TRANSACTION_URL + '/savings/' + id, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        toast('Goal deleted');
+        const card = document.getElementById('goal-card-' + id);
+        if (card) card.remove();
+        allGoals = allGoals.filter(g => g.id !== id);
+      } else {
+        toast('Delete failed', 'error');
+      }
+    } catch {
+      toast('Cannot reach Transaction Service.', 'error');
+    }
+  }
+
+  document.getElementById('edit-goal-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditGoalModal();
+  });
+
+  async function loadCurrency() {
+    const el = document.getElementById('rates-list');
+    try {
+      const res  = await fetch(CURRENCY_URL + '/currency?base=USD');
+      const data = await res.json();
+
+      cachedRates = data.all_rates || {
+        LBP: data.USD_to_LBP,
+        EUR: data.USD_to_EUR,
+        GBP: data.USD_to_GBP
+      };
+
+      const show = [
+        ['Lebanese Lira (LBP)', data.USD_to_LBP],
+        ['Euro (EUR)',           data.USD_to_EUR],
+        ['British Pound (GBP)', data.USD_to_GBP]
+      ];
+
+      el.innerHTML = show
+        .filter(([, v]) => v)
+        .map(([l, v]) => `
+          <div class="rate-row">
+            <span class="rate-label">${l}</span>
+            <span class="rate-val">${Number(v).toLocaleString()}</span>
+          </div>`).join('')
+        + (data.note ? `<div style="font-size:12px;color:var(--ink3);margin-top:12px">${data.note}</div>` : '');
+    } catch {
+      el.innerHTML = '<div class="empty">Cannot reach Currency Service. Is it running on port 5003?</div>';
+    }
+  }
+
+  async function loadLBPRate() {
+    try {
+      const res  = await fetch(CURRENCY_URL + '/currency?base=USD');
+      const data = await res.json();
+      document.getElementById('lbp-rate').textContent = Number(data.USD_to_LBP).toLocaleString() + ' LBP';
+    } catch {
+      document.getElementById('lbp-rate').textContent = 'offline';
+    }
+  }
+
+  function convertAmount() {
+    const usd = parseFloat(document.getElementById('conv-amount').value);
+    const el  = document.getElementById('conv-results');
+
+    if (!usd || !cachedRates) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--ink3)">Enter an amount above</div>';
+      return;
+    }
+
+    const pairs = [
+      ['LBP', 'Lebanese Lira'],
+      ['EUR', 'Euro'],
+      ['GBP', 'British Pound'],
+      ['SAR', 'Saudi Riyal'],
+      ['AED', 'UAE Dirham']
+    ];
+
+    el.innerHTML = pairs
+      .filter(([code]) => cachedRates[code])
+      .map(([code, name]) => `
+        <div class="rate-row">
+          <span class="rate-label">${name}</span>
+          <span class="rate-val">${(usd * cachedRates[code]).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${code}</span>
+        </div>`).join('');
+  }
+
+  function exportJSON() {
+    if (!allTransactions.length) return toast('No data to export', 'error');
+    downloadBlob(
+      new Blob([JSON.stringify(allTransactions, null, 2)], { type: 'application/json' }),
+      'transactions.json'
+    );
+    toast('JSON exported ✓');
+  }
+
+  function exportCSV() {
+    if (!allTransactions.length) return toast('No data to export', 'error');
+    const headers = ['id', 'type', 'amount', 'category', 'description', 'date'];
+    const rows    = allTransactions.map(tx => headers.map(k => JSON.stringify(tx[k] ?? '')).join(','));
+    downloadBlob(
+      new Blob([[headers.join(','), ...rows].join('\n')], { type: 'text/csv' }),
+      'transactions.csv'
+    );
+    toast('CSV exported ✓');
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+  loadDashboard();
+</script>
+</body>
+</html>
