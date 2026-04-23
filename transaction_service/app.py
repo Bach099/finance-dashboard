@@ -1,4 +1,4 @@
-#  TRANSACTION SERVICE  will be running on port 5001
+#  This service will be running on port 5001
 #  This is the main part of the app
 #  related to money: adding, reading, editing, and deleting
 #  transactions, plus managing savings goals.
@@ -113,8 +113,7 @@ def get_transactions():
     cursor.execute('SELECT * FROM transactions ORDER BY date DESC')
     rows = cursor.fetchall()
     conn.close()
-    # Convert each SQLite Row object into a plain Python dict
-    # so Flask can turn it into JSON automatically.
+    # Convert each SQLite Row object into a plain Python dictionary
     return jsonify([dict(row) for row in rows])
 
 

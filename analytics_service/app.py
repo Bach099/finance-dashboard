@@ -11,7 +11,6 @@ import os
 app = Flask(__name__)
 
 # CORS is needed so the browser doesn't block requests coming
-# from the frontend (which may run on a different port).
 CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -80,7 +79,7 @@ def get_summary():
     """)
     by_category = [dict(row) for row in cursor.fetchall()]
 
-    # Find the oldest transaction date so we can show
+    # Find the oldest transaction date so I can show
     cursor.execute("SELECT MIN(date) AS first_date FROM transactions")
     first_date_row = cursor.fetchone()
     first_date = first_date_row['first_date'] if first_date_row else None

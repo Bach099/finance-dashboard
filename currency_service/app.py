@@ -4,8 +4,8 @@
 # If the API is down or key is wrong, returns fallback rates
 
 # HOW TO ADD YOUR KEY:
-# Option 1 — edit this file: replace YOUR_API_KEY_HERE below
-# Option 2 — create a .env file with: EXCHANGE_API_KEY=yourkey
+# Option 1 (easiest) edit this file: replace YOUR_API_KEY_HERE below
+# Option 2: create a .env file with: EXCHANGE_API_KEY=yourkey
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -42,7 +42,7 @@ def get_currency():
     except Exception as e:
         print(f"Currency API error: {e}")
 
-    # Fallback rates — used when API is unavailable or key is missing
+    # Fallback rates:  when API is not available or key is missing
     return jsonify({
         "base":       base,
         "note":       "Using fallback rates — live API unavailable",
