@@ -7,7 +7,7 @@ All data is stored locally in a SQLite database.
 ---
 ## 📸 Screenshots
 
-https://github.com/Bach099/finance-dashboard/blob/main/Screenshots/Finance-dashboardss.png?raw=true
+![Finance Dashboard Screenshot](https://github.com/Bach099/finance-dashboard/blob/main/Screenshots/Finance-dashboardss.png?raw=true)
 
 
 
