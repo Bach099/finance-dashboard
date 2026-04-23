@@ -5,7 +5,7 @@ Three backend services handle transactions, analytics, and live currency rates.
 All data is stored locally in a SQLite database.
 
 ---
-## 📸 Screenshots
+## 📸 Screenshot
 
 ![Finance Dashboard Screenshot](https://github.com/Bach099/finance-dashboard/blob/main/Screenshots/Finance-dashboardss.png?raw=true)
 
